@@ -270,6 +270,10 @@ end
         'app/assets/stylesheets/application.css.scss'
     end
 
+    def setup_autoprefixer
+      copy_file "browserslist", "browserslist"
+    end
+
     def install_bitters
       run "bitters install --path app/assets/stylesheets"
     end
