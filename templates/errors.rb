@@ -17,18 +17,3 @@ HTTP_ERRORS = [
   Net::ProtocolError,
   Timeout::Error
 ]
-
-SMTP_SERVER_ERRORS = [
-  IOError,
-  Net::SMTPAuthenticationError,
-  Net::SMTPServerBusy,
-  Net::SMTPUnknownError,
-  TimeoutError
-]
-
-SMTP_CLIENT_ERRORS = [
-  Net::SMTPFatalError,
-  Net::SMTPSyntaxError
-]
-
-SMTP_ERRORS = SMTP_SERVER_ERRORS + SMTP_CLIENT_ERRORS

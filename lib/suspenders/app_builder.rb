@@ -78,48 +78,37 @@ module Suspenders
         :after => 'config.action_mailer.raise_delivery_errors = false'
     end
 
-    def enable_rack_deflater
-      config = <<-RUBY
-
-  # Enable deflate / gzip compression of controller-generated responses
-  config.middleware.use Rack::Deflater
-      RUBY
-
-      inject_into_file(
-        "config/environments/production.rb",
-        config,
-        after: serve_static_files_line
-      )
+    def configure_rollbar
+      copy_file 'rollbar.rb', 'config/initializers/rollbar.rb'
     end
 
-    def setup_asset_host
-      replace_in_file 'config/environments/production.rb',
-        "# config.action_controller.asset_host = 'http://assets.example.com'",
-        'config.action_controller.asset_host = ENV.fetch("ASSET_HOST", ENV.fetch("HOST"))'
-
-      replace_in_file 'config/initializers/assets.rb',
-        "config.assets.version = '1.0'",
-        'config.assets.version = (ENV["ASSETS_VERSION"] || "1.0")'
-
-      inject_into_file(
-        "config/environments/production.rb",
-        '  config.static_cache_control = "public, max-age=#{1.year.to_i}"',
-        after: serve_static_files_line
-      )
+    def configure_rollout
+      copy_file 'rollout.rb', 'config/initializers/rollout.rb'
     end
 
-    def setup_staging_environment
-      staging_file = 'config/environments/staging.rb'
-      copy_file 'staging.rb', staging_file
-
+    def configure_lograge
       config = <<-RUBY
 
-Rails.application.configure do
-  # ...
-end
+  config.lograge.enabled = true
       RUBY
 
-      append_file staging_file, config
+      inject_into_file( "config/environments/production.rb", "\n\n  #{config}", before: "\nend")
+    end
+
+    def configure_dalli
+      config = <<-RUBY
+
+  config.cache_store = :dalli_store,
+                    (ENV["MEMCACHIER_SERVERS"] || "").split(","),
+                    {:username => ENV["MEMCACHIER_USERNAME"],
+                     :password => ENV["MEMCACHIER_PASSWORD"],
+                     :failover => true,
+                     :socket_timeout => 1.5,
+                     :socket_failure_delay => 0.2
+                    }
+      RUBY
+
+      inject_into_file( "config/environments/production.rb", "\n\n  #{config}", before: "\nend")
     end
 
     def setup_secret_token
@@ -135,17 +124,17 @@ end
     end
 
     def create_shared_flashes
-      copy_file "_flashes.html.erb", "app/views/application/_flashes.html.erb"
+      copy_file "_flashes.html.slim", "app/views/application/_flashes.html.slim"
       copy_file "flashes_helper.rb", "app/helpers/flashes_helper.rb"
     end
 
     def create_shared_javascripts
-      copy_file '_javascript.html.erb', 'app/views/application/_javascript.html.erb'
+      copy_file '_javascript.html.slim', 'app/views/application/_javascript.html.slim'
     end
 
     def create_application_layout
-      template 'suspenders_layout.html.erb.erb',
-        'app/views/layouts/application.html.erb',
+      template 'suspenders_layout.html.slim.erb',
+        'app/views/layouts/application.html.slim',
         force: true
     end
 
@@ -171,7 +160,12 @@ end
       inject_into_file(
         "Gemfile",
         %{\n\s\sgem "rails_stdout_logging"},
-        after: /group :staging, :production do/
+        after: /group :production do/
+      )
+      inject_into_file(
+        "Gemfile",
+        %{\n\s\sgem "heroku-deflater"},
+        after: /group :production do/
       )
     end
 
@@ -179,9 +173,15 @@ end
       copy_file 'database_cleaner_rspec.rb', 'spec/support/database_cleaner.rb'
     end
 
-    def configure_spec_support_features
-      empty_directory_with_keep_file 'spec/features'
-      empty_directory_with_keep_file 'spec/support/features'
+    def configure_spinach
+      empty_directory_with_keep_file 'features'
+      empty_directory_with_keep_file 'features/steps'
+      empty_directory_with_keep_file 'features/support'
+      copy_file "spinach_capybara.rb", "features/support/capybara.rb"
+      copy_file "spinach_current_user.rb", "features/support/current_user.rb"
+      copy_file "spinach_env.rb", "features/support/env.rb"
+      copy_file "spinach_rails_helpers.rb", "features/support/rails_helpers.rb"
+      copy_file "spinach_warden.rb", "features/support/warden.rb"
     end
 
     def configure_rspec
@@ -189,10 +189,6 @@ end
       remove_file "spec/spec_helper.rb"
       copy_file "rails_helper.rb", "spec/rails_helper.rb"
       copy_file "spec_helper.rb", "spec/spec_helper.rb"
-    end
-
-    def configure_travis
-      template 'travis.yml.erb', '.travis.yml'
     end
 
     def configure_i18n_for_test_environment
@@ -209,12 +205,12 @@ end
       copy_file "config_i18n_tasks.yml", "config/i18n-tasks.yml"
     end
 
-    def configure_background_jobs_for_rspec
-      run 'rails g delayed_job:active_record'
-    end
-
     def configure_action_mailer_in_specs
       copy_file 'action_mailer.rb', 'spec/support/action_mailer.rb'
+    end
+
+    def configure_guard
+      copy_file 'Guardfile', 'Guardfile'
     end
 
     def configure_time_formats
@@ -237,14 +233,13 @@ Rack::Timeout.timeout = (ENV["RACK_TIMEOUT"] || 10).to_i
     def configure_action_mailer
       action_mailer_host "development", %{"localhost:#{port}"}
       action_mailer_host "test", %{"www.example.com"}
-      action_mailer_host "staging", %{ENV.fetch("HOST")}
       action_mailer_host "production", %{ENV.fetch("HOST")}
     end
 
     def configure_active_job
-      configure_application_file(
-        "config.active_job.queue_adapter = :delayed_job"
-      )
+      # configure_application_file(
+      #   "config.active_job.queue_adapter = :delayed_job"
+      # )
       configure_environment "test", "config.active_job.queue_adapter = :inline"
     end
 
@@ -260,8 +255,8 @@ Rack::Timeout.timeout = (ENV["RACK_TIMEOUT"] || 10).to_i
       generate 'rspec:install'
     end
 
-    def configure_unicorn
-      copy_file 'unicorn.rb', 'config/unicorn.rb'
+    def configure_puma
+      copy_file 'puma.rb', 'config/puma.rb'
     end
 
     def setup_foreman
@@ -275,8 +270,10 @@ Rack::Timeout.timeout = (ENV["RACK_TIMEOUT"] || 10).to_i
         'app/assets/stylesheets/application.css.scss'
     end
 
-    def install_bitters
-      run "bitters install --path app/assets/stylesheets"
+    def setup_scripts
+      remove_file 'app/assets/javascripts/application.js'
+      copy_file 'application.js',
+        'app/assets/javascripts/application.js'
     end
 
     def gitignore_files
@@ -300,14 +297,6 @@ Rack::Timeout.timeout = (ENV["RACK_TIMEOUT"] || 10).to_i
       run 'git init'
     end
 
-    def create_staging_heroku_app(flags)
-      rack_env = "RACK_ENV=staging RAILS_ENV=staging"
-      app_name = heroku_app_name_for("staging")
-
-      run_heroku "create #{app_name} #{flags}", "staging"
-      run_heroku "config:add #{rack_env}", "staging"
-    end
-
     def create_production_heroku_app(flags)
       app_name = heroku_app_name_for("production")
 
@@ -315,15 +304,13 @@ Rack::Timeout.timeout = (ENV["RACK_TIMEOUT"] || 10).to_i
     end
 
     def create_heroku_apps(flags)
-      create_staging_heroku_app(flags)
       create_production_heroku_app(flags)
     end
 
     def set_heroku_remotes
       remotes = <<-SHELL
 
-# Set up the staging and production apps.
-#{join_heroku_app('staging')}
+# Set up the production apps.
 #{join_heroku_app('production')}
       SHELL
 
@@ -343,13 +330,13 @@ fi
     end
 
     def set_heroku_rails_secrets
-      %w(staging production).each do |environment|
+      %w(production).each do |environment|
         run_heroku "config:add SECRET_KEY_BASE=#{generate_secret}", environment
       end
     end
 
     def set_heroku_serve_static_files
-      %w(staging production).each do |environment|
+      %w(production).each do |environment|
         run_heroku "config:add RAILS_SERVE_STATIC_FILES=true", environment
       end
     end
@@ -362,9 +349,8 @@ fi
 ## Deploying
 
 If you have previously run the `./bin/setup` script,
-you can deploy to staging and production with:
+you can deploy to production with:
 
-    $ ./bin/deploy staging
     $ ./bin/deploy production
       MARKDOWN
 
@@ -377,14 +363,9 @@ you can deploy to staging and production with:
       run "#{path_addition} hub create #{repo_name}"
     end
 
-    def setup_segment
-      copy_file '_analytics.html.erb',
-        'app/views/application/_analytics.html.erb'
-    end
-
-    def setup_bundler_audit
-      copy_file "bundler_audit.rake", "lib/tasks/bundler_audit.rake"
-      append_file "Rakefile", %{\ntask default: "bundler:audit"\n}
+    def setup_google_analytics
+      copy_file '_analytics.html.slim',
+        'app/views/application/_analytics.html.slim'
     end
 
     def copy_miscellaneous_files

@@ -7,9 +7,12 @@ module Suspenders
       desc: "Configure for selected database (options: #{DATABASES.join("/")})"
 
     class_option :heroku, type: :boolean, aliases: "-H", default: false,
-      desc: "Create staging and production Heroku apps"
+      desc: "Create production Heroku apps"
 
-    class_option :heroku_flags, type: :string, default: "",
+    class_option :rollout, type: :boolean, default: false,
+      desc: "Include rollout as a feature flip"
+
+    class_option :heroku_flags, type: :string, default: "--region eu --addons heroku-postgresql:hobby-dev,newrelic:stark,papertrail:choklad,rollbar:free,sendgrid:starter,rediscloud:25,memcachier:dev",
       desc: "Set extra Heroku flags"
 
     class_option :github, type: :string, aliases: "-G", default: nil,
@@ -34,12 +37,11 @@ module Suspenders
       invoke :setup_development_environment
       invoke :setup_test_environment
       invoke :setup_production_environment
-      invoke :setup_staging_environment
       invoke :setup_secret_token
       invoke :create_suspenders_views
       invoke :configure_app
       invoke :setup_stylesheets
-      invoke :install_bitters
+      invoke :setup_scripts
       invoke :copy_miscellaneous_files
       invoke :customize_error_pages
       invoke :remove_routes_comment_lines
@@ -47,8 +49,6 @@ module Suspenders
       invoke :setup_database
       invoke :create_heroku_apps
       invoke :create_github_repo
-      invoke :setup_segment
-      invoke :setup_bundler_audit
       invoke :outro
     end
 
@@ -89,10 +89,9 @@ module Suspenders
       build :set_up_factory_girl_for_rspec
       build :generate_rspec
       build :configure_rspec
-      build :configure_background_jobs_for_rspec
       build :enable_database_cleaner
-      build :configure_spec_support_features
-      build :configure_travis
+      build :configure_guard
+      build :configure_spinach
       build :configure_i18n_for_test_environment
       build :configure_i18n_tasks
       build :configure_action_mailer_in_specs
@@ -101,15 +100,7 @@ module Suspenders
     def setup_production_environment
       say 'Setting up the production environment'
       build :configure_newrelic
-      build :configure_smtp
       build :configure_rack_timeout
-      build :enable_rack_deflater
-      build :setup_asset_host
-    end
-
-    def setup_staging_environment
-      say 'Setting up the staging environment'
-      build :setup_staging_environment
     end
 
     def setup_secret_token
@@ -123,6 +114,7 @@ module Suspenders
       build :create_shared_flashes
       build :create_shared_javascripts
       build :create_application_layout
+      build :setup_google_analytics
     end
 
     def configure_app
@@ -134,8 +126,15 @@ module Suspenders
       build :disable_xml_params
       build :fix_i18n_deprecation_warning
       build :setup_default_rake_task
-      build :configure_unicorn
+      build :configure_puma
+      build :configure_lograge
+      build :configure_dalli
       build :setup_foreman
+      build :configure_rollbar
+
+      if options[:rollout]
+        build :configure_rollout
+      end
     end
 
     def setup_stylesheets
@@ -143,9 +142,9 @@ module Suspenders
       build :setup_stylesheets
     end
 
-    def install_bitters
-      say 'Install Bitters'
-      build :install_bitters
+    def setup_scripts
+      say 'Set up scripts'
+      build :setup_scripts
     end
 
     def setup_git
@@ -174,18 +173,8 @@ module Suspenders
       end
     end
 
-    def setup_segment
-      say 'Setting up Segment'
-      build :setup_segment
-    end
-
     def setup_gitignore
       build :gitignore_files
-    end
-
-    def setup_bundler_audit
-      say "Setting up bundler-audit"
-      build :setup_bundler_audit
     end
 
     def init_git
@@ -208,7 +197,6 @@ module Suspenders
 
     def outro
       say 'Congratulations! You just pulled our suspenders.'
-      say "Remember to run 'rails generate airbrake' with your API key."
     end
 
     protected

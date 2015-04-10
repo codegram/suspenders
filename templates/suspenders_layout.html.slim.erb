@@ -1,0 +1,30 @@
+doctype html
+html.js
+  head
+    meta charset="utf-8"
+    meta name="ROBOTS" content="NOODP"
+    meta name="viewport" content="width=device-width,initial-scale=1"
+
+    = favicon_link_tag 'favicon.ico'
+    = stylesheet_link_tag 'application', media: 'all'
+    = csrf_meta_tags
+
+    title="#{@title + " - " if @title}<%= app_name.humanize %>
+
+    meta property="og:title" content="<%= app_name.humanize %>"
+    meta property="og:type" content="website"
+    meta property="og:image" content=""
+    meta property="og:url" content=""
+    meta property="og:description" content=""
+
+    meta name="twitter:card" content="summary"
+    meta name="twitter:url" content=""
+    meta name="twitter:creator" content=""
+    meta name="twitter:title" content="<%= app_name.humanize %>"
+    meta name="twitter:description" content=""
+    meta name="twitter:image" content=""
+
+  body
+    = render "flashes"
+    = yield
+    = render "javascript"

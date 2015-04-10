@@ -25,32 +25,21 @@ generated projectname/Gemfile.
 
 It includes application gems like:
 
-* [Airbrake](https://github.com/airbrake/airbrake) for exception notification
-* [Bourbon](https://github.com/thoughtbot/bourbon) for Sass mixins
-* [Bitters](https://github.com/thoughtbot/bitters) for scaffold application styles
-* [Delayed Job](https://github.com/collectiveidea/delayed_job) for background
-  processing
-* [Email Validator](https://github.com/balexand/email_validator) for email
-  validation
-* [Flutie](https://github.com/thoughtbot/flutie) for `page_title` and `body_class` view
-  helpers
+* [Oj]()
+* [Slim]()
+* [Devise]()
+* [Rollout]()
+* [Rollbar]()
+* [Lograge]()
+* [Dalli]()
 * [High Voltage](https://github.com/thoughtbot/high_voltage) for static pages
 * [jQuery Rails](https://github.com/rails/jquery-rails) for jQuery
-* [Neat](https://github.com/thoughtbot/neat) for semantic grids
 * [New Relic RPM](https://github.com/newrelic/rpm) for monitoring performance
-* [Normalize](https://necolas.github.io/normalize.css/) for resetting browser styles
 * [Postgres](https://github.com/ged/ruby-pg) for access to the Postgres database
 * [Rack Timeout](https://github.com/kch/rack-timeout) to abort requests that are
   taking too long
-* [Recipient Interceptor](https://github.com/croaky/recipient_interceptor) to
-  avoid accidentally sending emails to real people from staging
-* [Refills](https://github.com/thoughtbot/refills) for “copy-paste” components
-  and patterns based on Bourbon, Neat and Bitters
 * [Simple Form](https://github.com/plataformatec/simple_form) for form markup
   and style
-* [Title](https://github.com/calebthompson/title) for storing titles in
-  translations
-* [Unicorn](https://github.com/defunkt/unicorn) to serve HTTP requests
 
 And development gems like:
 
@@ -59,12 +48,11 @@ And development gems like:
   objects
 * [ByeBug](https://github.com/deivid-rodriguez/byebug) for interactively
   debugging behavior
-* [Bundler Audit](https://github.com/rubysec/bundler-audit) for scanning the
-  Gemfile for insecure dependencies based on published CVEs
 * [Spring](https://github.com/rails/spring) for fast Rails actions via
   pre-loading
 * [Web Console](https://github.com/rails/web-console) for better debugging via
   in-browser IRB consoles.
+* [Guard]()
 
 And testing gems like:
 
@@ -75,10 +63,9 @@ And testing gems like:
 * [Formulaic](https://github.com/thoughtbot/formulaic) for integration testing
   HTML forms
 * [RSpec](https://github.com/rspec/rspec) for unit testing
-* [RSpec Mocks](https://github.com/rspec/rspec-mocks) for stubbing and spying
-* [Shoulda Matchers](https://github.com/thoughtbot/shoulda-matchers) for common
-  RSpec matchers
-* [Timecop](https://github.com/jtrupiano/timecop-console) for testing time
+* [Spinach]()
+* [Oj]()
+* [Oj]()
 
 ## Other goodies
 
@@ -103,8 +90,6 @@ Suspenders also comes with:
 [pool]: https://devcenter.heroku.com/articles/concurrency-and-database-connections
 [binstub]: https://github.com/thoughtbot/suspenders/pull/282
 [i18n]: https://github.com/thoughtbot/suspenders/pull/304
-[travis]: http://docs.travis-ci.com/user/travis-pro/
-[segment]: https://segment.com
 
 ## Heroku
 
@@ -124,6 +109,7 @@ This:
 
 [logging-gem]: https://github.com/heroku/rails_stdout_logging
 [heroku-logging]: https://devcenter.heroku.com/articles/logging#writing-to-your-log
+[rails_12factor]
 
 You can optionally specify alternate Heroku flags:
 
